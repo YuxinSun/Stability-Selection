@@ -41,14 +41,14 @@ class StabSelect():
 
     -------------------------
     algorithm-specific:
+    :param param_range: list, length n_parameters
+        list of regularisation parameters
+        Lasso, randomised Lasso, and exclusive group Lasso: list of lambda values
+        LPBoost: list of nu values
+        elastic net: list of paired alpha and l1_ratio
+
     :param alpha: float
-        regularisation parameter alpha in elastic net, nu in LPBoost, lambda in Lasso and exclusive group Lasso
-
-    :param l1_ratio: float
-        l1 ratio in elastic net [??]
-
-    :param param_range: tuple with two entries
-        lambda range in exclusive group Lasso (solved by coordinate descent)
+        alpha in randomised Lasso
 
     :param idx_group: array-like, shape: [??]
         indicator matrix of group allocation in exclusive group Lasso
@@ -78,10 +78,11 @@ class StabSelect():
 
     """
 
-    def __init__(self, param_range=np.linspace(0.01, 1, 100), alpha=0.5, sample_size=None, p_threshold=0.5, n_iter=100,
+    def __init__(self, param_range=np.linspace(0.01, 1, 100), alpha=0.5, l1_ratio=0.5, sample_size=None, p_threshold=0.5, n_iter=100,
                  reg_type='lasso', verbose=0, idx_group=None, n_group=50):
         self.param_range = param_range
         self.alpha = alpha
+        self.l1_ratio = l1_ratio
         self.sample_size = sample_size
         self.p_threshold = p_threshold
         self.n_iter = n_iter
