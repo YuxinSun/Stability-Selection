@@ -73,9 +73,6 @@ class StabSelect():
     :return max_prob: array-like, shape (n_features, )
         maximum selection probability over all parameters, not recommended for use
 
-    :return convergence: list, length n_iter
-        list of boolean variables that indicate convergence of individual iterations of stability selection
-
     """
 
     def __init__(self, param_range=np.linspace(0.01, 1, 100), alpha=0.5, l1_ratio=0.5, sample_size=None, p_threshold=0.5, n_iter=100,
@@ -131,13 +128,13 @@ class StabSelect():
         :param w_vec: array-like, shape (n_feature, n_parameter)
             estimated weights over all parameters under current iteration
 
-        :return idx: array_like, shape (n_selected_feature, )  [??]
+        :return idx: array_like, shape (n_selected_feature, )
             indices of selected features
 
         """
-        idx = np.where(abs(w_vec) >= 10**-3)
+        idx = np.where(abs(w_vec) >= 10**-3)[0]
 
-        return idx[0]
+        return idx
 
     def _fit(self, X, y):
 
@@ -146,7 +143,7 @@ class StabSelect():
             self.sample_size = int(n_sample / 2)
 
         w_counter = sp.csr_matrix((n_feature, len(self.param_range)))
-        w_vals, idx_vals, convergence = [], [], []
+        w_vals, idx_vals = [], []
 
         # stability selection
         for counter in range(self.n_iter):
@@ -161,18 +158,16 @@ class StabSelect():
             y_sub = y[sub_idx]
 
             # fit subsamples to get coefficients
-            w_vec, converged = self._compute_w(X_sub, y_sub)
-            if converged:
-                w_counter += self._select_feature(w_vec)
+            w_vec = self._compute_w(X_sub, y_sub)
+            w_counter += self._select_feature(w_vec)
 
             idx_temp = self._get_weights(w_vec)
             w_vals.append(w_vec)
             idx_vals.append(idx_temp)
-            convergence.append(converged)
 
         # compute selection probabilities
         # select features with selection probabilities larger than p_threshold under all lambdas
-        select_prob = w_counter / float(len(np.where(convergence)[0]))
+        select_prob = w_counter / float(len(w_vals))
         max_select_prob = np.max(select_prob, axis=1)
         idx = np.where(max_select_prob >= self.p_threshold)[0]
 
@@ -182,7 +177,6 @@ class StabSelect():
         self.max_prob = max_select_prob
         self.weights_total = w_vals
         self.idx_total = idx_vals
-        self.convergence = convergence
 
     def fit(self, X, y):
         """
