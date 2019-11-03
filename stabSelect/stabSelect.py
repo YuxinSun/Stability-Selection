@@ -23,7 +23,7 @@ class StabSelect():
             lpboost: LPBoost (almost equivalent to l1-regularised svm, only returned postive weights, solved by linear programming)
             excl lasso: exclusive group Lasso (solved by multiple implementations)
             excl lasso sparse: exclusive group Lasso (optimised for sparse feature matrices, solved by multiple implementations)
-            for LPBoost and exclusive group Lasso, installation of [??] and [??] is required
+            for LPBoost and exclusive group Lasso, installation of LPBoost and exclGroupLasso is required
 
     :param n_iter: int
         number of iterations in stability selection
@@ -50,7 +50,7 @@ class StabSelect():
     :param alpha: float
         alpha in randomised Lasso
 
-    :param idx_group: array-like, shape: [??]
+    :param idx_group: array-like, shape (n_group, n_feature)
         indicator matrix of group allocation in exclusive group Lasso
         does require predefinition if n_group is specified
 

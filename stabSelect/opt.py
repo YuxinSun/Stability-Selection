@@ -3,7 +3,8 @@ __author__ = 'yuxinsun'
 import numpy as np
 import scipy.sparse as sp
 from sklearn.linear_model import Lasso, ElasticNet, SGDClassifier
-
+from LPBoost.lpboost import lpboost
+from exclGroupLasso.ExclGroupLasso import l12_norm_transformed, l12_norm_sparse
 
 def standard_lasso(X, y, param_val):
     """
@@ -360,9 +361,9 @@ def fitAlg(X, y, param_range, alpha, reg_type, idx_group=None, n_group=None):
         lpboost: LPBoost (almost equivalent to l1-regularised svm, only returned postive weights, solved by linear programming)
         excl lasso: exclusive group Lasso (solved by multiple implementations)
         excl lasso sparse: exclusive group Lasso (optimised for sparse feature matrices, solved by multiple implementations)
-        for LPBoost and exclusive group Lasso, installation of [??] and [??] is required
+        for LPBoost and exclusive group Lasso, installation of LPBoost and exclGroupLasso is required
 
-    :param idx_group:  array-like, shape: [??]
+    :param idx_group:  array-like, shape (n_group, n_feature)
         indicator matrix of group allocation in exclusive group Lasso
         does require predefinition if n_group is specified
 
