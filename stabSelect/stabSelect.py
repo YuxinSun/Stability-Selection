@@ -103,7 +103,7 @@ class StabSelect():
 
         """
         return fitAlg(X, y, param_range=self.param_range, alpha=self.alpha, reg_type=self.reg_type,
-                        idx_group=self.idx_group, n_group=self.n_group)
+                      idx_group=self.idx_group, n_group=self.n_group, verbose=self.verbose)
 
     def _select_feature(self, w_vec):
         """
@@ -168,7 +168,7 @@ class StabSelect():
         # compute selection probabilities
         # select features with selection probabilities larger than p_threshold under all lambdas
         select_prob = w_counter / float(len(w_vals))
-        max_select_prob = np.max(select_prob, axis=1)
+        max_select_prob = np.max(select_prob, axis=1).todense()
         idx = np.where(max_select_prob >= self.p_threshold)[0]
 
         self.idx = idx

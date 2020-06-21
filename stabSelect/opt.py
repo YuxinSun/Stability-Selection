@@ -3,8 +3,10 @@ __author__ = 'yuxinsun'
 import numpy as np
 import scipy.sparse as sp
 from sklearn.linear_model import Lasso, ElasticNet, SGDClassifier
-from LPBoost.lpboost import lpboost
-from exclGroupLasso.ExclGroupLasso import l12_norm_transformed, l12_norm_sparse
+from exclGroupLasso.ExclGroupLasso import reweightEG
+# from LPBoost.lpboost import lpboost
+# from exclGroupLasso.ExclGroupLasso import l12_norm_transformed, l12_norm_sparse
+
 
 def standard_lasso(X, y, param_val):
     """
@@ -154,30 +156,30 @@ def l1_hinge(X, y, param_val):
     return np.ravel(clf.coef_)
 
 
-def lp(X, y, param_val):
-    """
-    LPBoost
-
-    -------------------------
-    :param X: array-like, shape (n_sample, n_feature)
-        input features
-    :param y: array-like, shape (n_sample, )
-        input labels
-    :param param_val: float
-        regularisation parameter nu in LPBoost
-
-    -------------------------
-    :return: array-like, shape (n_feature, )
-        estimated weights/coefficients
-    """
-
-    clf = lpboost(nu=param_val)
-    clf.fit(X, y)
-
-    w = np.zeros(X.shape[1])
-    w[clf.idx] = clf.a
-
-    return w
+# def lp(X, y, param_val):
+#     """
+#     LPBoost
+#
+#     -------------------------
+#     :param X: array-like, shape (n_sample, n_feature)
+#         input features
+#     :param y: array-like, shape (n_sample, )
+#         input labels
+#     :param param_val: float
+#         regularisation parameter nu in LPBoost
+#
+#     -------------------------
+#     :return: array-like, shape (n_feature, )
+#         estimated weights/coefficients
+#     """
+#
+#     clf = lpboost(nu=param_val)
+#     clf.fit(X, y)
+#
+#     w = np.zeros(X.shape[1])
+#     w[clf.idx] = clf.a
+#
+#     return w
 
 
 def l12_norm(X, y, idx_group, n_group, param_val):
@@ -224,7 +226,6 @@ def l12_norm(X, y, idx_group, n_group, param_val):
         n_group, n_feature = idx_group.shape
 
         if np.all(np.equal(np.diag(idx_group[:, -n_group:]), np.ones(n_group))):  # artificial features
-            print 'artificial'
 
             n_feature_X = n_feature - n_group  # n_original_feature = n_art_feature - n_group
             idx_art = idx_group[:, -n_group:]
@@ -234,7 +235,6 @@ def l12_norm(X, y, idx_group, n_group, param_val):
             idx_group = np.hstack((idx_group[:, idx], idx_art))
 
         elif np.array_equal(np.nonzero(idx_group[:, :n_group])[1], range(n_group)):  # fixed group
-            print 'fixed'
 
             idx = np.random.permutation(n_feature - n_group)  # for fixed group, n_group = n_useful_feature
             idx = np.array_split(idx, n_group)
@@ -248,88 +248,88 @@ def l12_norm(X, y, idx_group, n_group, param_val):
         else:  # customised group with no need to change
             pass
 
-    clf = l12_norm_transformed(c=param_val, idx_group=idx_group)
+    clf = reweightEG(alpha=param_val, idx_group=idx_group)
     clf.fit(X, y)
 
     return clf.coef
 
 
-def l12_sparse(X, y, idx_group, n_group, param_val, random_state=None):
-    """
-    Exclusive group Lasso, optimised for sparse matrices
+# def l12_sparse(X, y, idx_group, n_group, param_val, random_state=None):
+#     """
+#     Exclusive group Lasso, optimised for sparse matrices
+#
+#     -------------------------
+#     :param X: array-like, shape (n_sample, n_feature)
+#         input features
+#     :param y: array-like, shape (n_sample, )
+#         input labels
+#     :param idx_group: array-like, shape (n_group, n_feature)
+#         indicator matrix of group allocation
+#     :param n_group: int
+#         number of groups, must be specified if idx_group is not defined
+#         when idx_group is not defined, n_group random groups will be created
+#     :param param_val: tuple or list, length 2
+#         regularisation parameter lambda in exclusive group Lasso
+#
+#     -------------------------
+#     :return: array-like, shape (n_feature, )
+#         estimated weights/coefficients
+#     """
+#
+#     if idx_group is None:  # random group
+#
+#         if n_group is None:
+#             raise KeyError('n_group must be specified when idx_group is None.')
+#         elif not (isinstance(n_group, int) or (isinstance(n_group, float) and n_group.is_integer())):
+#             raise KeyError('n_group must be an integer.')
+#
+#         n_feature = X.shape[1]
+#
+#         # idx_group = np.zeros((n_group, n_feature))
+#         idx_group = sp.lil_matrix((n_group, n_feature))  # modified for sparse
+#         idx = np.random.permutation(n_feature)
+#         idx = np.array_split(idx, n_group)
+#
+#         for sub_counter, sub_idx in enumerate(idx):
+#             idx_group[sub_counter, sub_idx] = 1
+#
+#         idx_group = sp.csr_matrix(idx_group)  # modified for sparse
+#
+#     else:
+#
+#         n_group, n_feature = idx_group.shape
+#
+#         if np.all(np.equal(np.diag(idx_group[:, -n_group:]), np.ones(n_group))):  # artificial features
+#             print 'artificial'
+#
+#             n_feature_X = n_feature - n_group  # n_original_feature = n_art_feature - n_group
+#             idx_art = idx_group[:, -n_group:]
+#             idx = np.random.permutation(n_feature_X)
+#
+#             idx_group = idx_group[:, :n_feature_X]
+#             idx_group = np.hstack((idx_group[:, idx], idx_art))
+#
+#         if np.array_equal(np.nonzero(idx_group[:, :n_group])[1], range(n_group)):  # fixed group
+#
+#             idx = np.random.permutation(n_feature - n_group)  # for fixed group, n_group = n_useful_feature
+#             idx = np.array_split(idx, n_group)
+#
+#             idx_group = np.zeros((n_group, n_feature - n_group))
+#             for sub_counter, sub_idx in enumerate(idx):
+#                 idx_group[sub_counter, sub_idx] = 1
+#
+#             idx_group = np.hstack((np.eye(n_group), idx_group))
+#
+#         else:  # customised group with no need to change
+#             pass
+#
+#     clf = l12_norm_sparse(c=param_val, idx_group=idx_group, verbose=1)
+#     clf.fit(X, y)
+#
+#     return clf.coef
 
-    -------------------------
-    :param X: array-like, shape (n_sample, n_feature)
-        input features
-    :param y: array-like, shape (n_sample, )
-        input labels
-    :param idx_group: array-like, shape (n_group, n_feature)
-        indicator matrix of group allocation
-    :param n_group: int
-        number of groups, must be specified if idx_group is not defined
-        when idx_group is not defined, n_group random groups will be created
-    :param param_val: tuple or list, length 2
-        regularisation parameter lambda in exclusive group Lasso
 
-    -------------------------
-    :return: array-like, shape (n_feature, )
-        estimated weights/coefficients
-    """
-
-    if idx_group is None:  # random group
-
-        if n_group is None:
-            raise KeyError('n_group must be specified when idx_group is None.')
-        elif not (isinstance(n_group, int) or (isinstance(n_group, float) and n_group.is_integer())):
-            raise KeyError('n_group must be an integer.')
-
-        n_feature = X.shape[1]
-
-        # idx_group = np.zeros((n_group, n_feature))
-        idx_group = sp.lil_matrix((n_group, n_feature))  # modified for sparse
-        idx = np.random.permutation(n_feature)
-        idx = np.array_split(idx, n_group)
-
-        for sub_counter, sub_idx in enumerate(idx):
-            idx_group[sub_counter, sub_idx] = 1
-
-        idx_group = sp.csr_matrix(idx_group)  # modified for sparse
-
-    else:
-
-        n_group, n_feature = idx_group.shape
-
-        if np.all(np.equal(np.diag(idx_group[:, -n_group:]), np.ones(n_group))):  # artificial features
-            print 'artificial'
-
-            n_feature_X = n_feature - n_group  # n_original_feature = n_art_feature - n_group
-            idx_art = idx_group[:, -n_group:]
-            idx = np.random.permutation(n_feature_X)
-
-            idx_group = idx_group[:, :n_feature_X]
-            idx_group = np.hstack((idx_group[:, idx], idx_art))
-
-        if np.array_equal(np.nonzero(idx_group[:, :n_group])[1], range(n_group)):  # fixed group
-
-            idx = np.random.permutation(n_feature - n_group)  # for fixed group, n_group = n_useful_feature
-            idx = np.array_split(idx, n_group)
-
-            idx_group = np.zeros((n_group, n_feature - n_group))
-            for sub_counter, sub_idx in enumerate(idx):
-                idx_group[sub_counter, sub_idx] = 1
-
-            idx_group = np.hstack((np.eye(n_group), idx_group))
-
-        else:  # customised group with no need to change
-            pass
-
-    clf = l12_norm_sparse(c=param_val, idx_group=idx_group, verbose=1)
-    clf.fit(X, y)
-
-    return clf.coef
-
-
-def fitAlg(X, y, param_range, alpha, reg_type, idx_group=None, n_group=None):
+def fitAlg(X, y, param_range, alpha, reg_type, idx_group=None, n_group=None, verbose=0):
     """
     Fit feature selection algorithms
 
@@ -405,17 +405,19 @@ def fitAlg(X, y, param_range, alpha, reg_type, idx_group=None, n_group=None):
     elif reg_type == 'lpboost':  # lpboost
         for counter, param_val in enumerate(param_range):
             w_vec[:, counter] = lp(X, y, param_val)
-    elif reg_type == 'l12_norm':  # exclusive group Lasso
+    elif reg_type == 'excl grp lasso':  # exclusive group Lasso
         if idx_group is None and n_group is None:
             raise KeyError('must specify at least one between idx_group and n_group')
         for counter, param_val in enumerate(param_range):
-            print 'param(%d/%d): %.4f' % (counter, len(param_range), param_val)
+            if verbose == 1:
+                print 'param(%d/%d): %.4f' % (counter, len(param_range), param_val)
             w_vec[:, counter] = l12_norm(X, y, idx_group, n_group, param_val)
     elif reg_type == 'l12_norm_sparse':  # exclusive group Lasso, optimised for sparse matrices
         if idx_group is None and n_group is None:
             raise KeyError('must specify at least one between idx_group and n_group')
         for counter, param_val in enumerate(param_range):
-            print 'param(%d/%d): %.4f' % (counter, len(param_range), param_val)
+            if verbose == 1:
+                print 'param(%d/%d): %.4f' % (counter, len(param_range), param_val)
             w_vec[:, counter] = l12_sparse(X, y, idx_group, n_group, param_val)
     else:  # other algorithms are not implemented
         raise KeyError('not implemented yet')
